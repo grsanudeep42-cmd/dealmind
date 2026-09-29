@@ -75,6 +75,9 @@ recalled_ids = [
 
 These IDs are returned to the frontend so the UI can display exactly which past deal was recalled for each coaching turn. Users see `meridian-deal-summary (LOST $380K)` and `dataflow-deal-summary (LOST $290K)` appear in real time.
 
+![deal_agent.py — recall() pipeline pulling from historical-deals bank and current deal bank](member2_screenshot1_recall.png)
+*Lines 727–751: Two targeted recall() calls — one for all-time historical deals, one for the current deal's own call transcripts. Both feed into the same Groq prompt.*
+
 ---
 
 ## Step 3: Groq Takes Over
@@ -91,6 +94,9 @@ user = (
 ```
 
 Groq then generates a structured JSON response — the coaching type, the reference deal, the pattern, the coaching advice, and the exact words the rep should say.
+
+![deal_agent.py — Groq system prompt and user prompt with memory context injected](member2_screenshot2_groq.png)
+*Lines 759–776: The system prompt defines the JSON output schema. The user prompt injects the recalled historical deal patterns directly before asking Groq to generate coaching.*
 
 ---
 

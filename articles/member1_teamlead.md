@@ -39,6 +39,9 @@ When a customer says something during a live deal, the recalled memories are inj
 **Layer 3 — Interface (Next.js + FastAPI)**
 The frontend is a Next.js app with four main sections: Chat (live coaching), Graph (deal relationship map), Insights (risk scoring), and Simulate (the dual-track deal simulation). The backend is a FastAPI service deployed on Render.
 
+![DealMind Chat — Synapse answering a live deal question using Hindsight memory](member1_screenshot1_chat.png)
+*Synapse recalls specific deal calls (Call #3, Call #5) to answer a CFO pricing question — grounded in actual deal transcripts, not generic advice.*
+
 ---
 
 ## The Simulation — Our Centrepiece Demo
@@ -50,6 +53,9 @@ The most powerful part of DealMind is the simulation page. We take one real deal
 **Track 2 (Without Synapse):** The same customer. The same objections. No memory. The rep repeats three compounding mistakes that lost three previous deals. Weaviate wins the contract. $480K gone.
 
 Same deal. Same rep. Different outcome. That is the entire value proposition.
+
+![DealMind Simulation — With Synapse coaching card showing Hindsight recall and pattern warning](member1_screenshot2_simulation.png)
+*Turn 1: The customer asks about multi-tenant architecture. Hindsight instantly recalls DataFlow Inc (LOST $290K) and Meridian Corp (LOST $380K). Synapse warns the rep before they make the same mistake.*
 
 ---
 

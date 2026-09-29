@@ -617,3 +617,59 @@ async def get_cross_deal_patterns() -> dict[str, Any]:
         "source": f"Synapse graph ({total_edges} edges) -> Groq pattern synthesis — not hardcoded",
         "deals_analysed": [DEAL_ID, NOVATECH_DEAL_ID],
     }
+
+
+# ---------------------------------------------------------------------------
+# Transcript upload / ingest
+# ---------------------------------------------------------------------------
+
+from fastapi import UploadFile, File as FastAPIFile  # noqa: E402
+
+
+@router.post("/deal/{deal_id}/ingest")
+async def ingest_transcript(
+    deal_id: str,
+    call_number: int,
+    file: UploadFile = FastAPIFile(...),
+) -> dict:
+    """Upload a call transcript (PDF or TXT) and retain it in Hindsight."""
+    content_bytes = await file.read()
+
+    # Decode text
+    if file.filename and file.filename.lower().endswith(".pdf"):
+        try:
+            import io
+            import pypdf  # type: ignore
+            reader = pypdf.PdfReader(io.BytesIO(content_bytes))
+            text = "\n".join(p.extract_text() or "" for p in reader.pages)
+        except Exception as exc:
+            _logger.warning("PDF parse failed (%s) — falling back to raw bytes", exc)
+            text = content_bytes.decode("utf-8", errors="replace")
+    else:
+        text = content_bytes.decode("utf-8", errors="replace")
+
+    if not text.strip():
+        raise HTTPException(status_code=400, detail="Could not extract text from the uploaded file.")
+
+    doc_id = f"{deal_id}-call-{call_number}"
+    metadata = {
+        "deal_id": deal_id,
+        "call_number": call_number,
+        "source": "upload",
+        "filename": file.filename or "transcript.txt",
+    }
+
+    try:
+        await retain(bank_id=deal_id, document_id=doc_id, text=text, metadata=metadata)
+    except Exception as exc:
+        _logger.error("retain() failed for %s: %s", doc_id, exc)
+        raise HTTPException(status_code=502, detail=f"Hindsight retain failed: {exc}") from exc
+
+    _logger.info("Ingested %s (%d chars) into Hindsight bank %s", doc_id, len(text), deal_id)
+    return {
+        "status": "ok",
+        "deal_id": deal_id,
+        "document_id": doc_id,
+        "call_number": call_number,
+        "message": f"Call #{call_number} ingested into Hindsight ({len(text):,} chars).",
+    }

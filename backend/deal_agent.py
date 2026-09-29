@@ -689,6 +689,106 @@ async def get_risk_score(deal_id: str) -> dict[str, Any]:
 
 
 # ---------------------------------------------------------------------------
+# Deal Simulation
+# ---------------------------------------------------------------------------
+
+@router.get("/simulation/script")
+async def get_simulation_script() -> dict[str, Any]:
+    """Return the pre-built simulation script for the Acme Corp deal."""
+    from synthetic_data import SIMULATION_SCRIPT, HISTORICAL_DEALS
+    return {
+        "deal_id": DEAL_ID,
+        "deal_name": "Acme Corp — $480K ARR",
+        "script": SIMULATION_SCRIPT,
+        "historical_deals": [
+            {"deal_name": d["deal_name"], "value": d["value"], "outcome": d["outcome"], "reason": d.get("lost_reason") or d.get("won_reason", "")}
+            for d in HISTORICAL_DEALS
+        ],
+    }
+
+
+class SimulateSuggestRequest(BaseModel):
+    deal_id: str
+    customer_message: str
+    conversation_history: list[dict] = []
+
+
+@router.post("/simulation/suggest")
+async def simulation_suggest(body: SimulateSuggestRequest) -> dict[str, Any]:
+    """
+    Live Groq coaching: given a customer message in a sales conversation,
+    recall from historical-deals bank and return a coaching suggestion.
+    """
+    from synthetic_data import HISTORICAL_BANK_ID
+
+    # Recall from historical deals bank
+    history_memories = await recall(
+        bank_id=HISTORICAL_BANK_ID,
+        query=body.customer_message,
+        budget="high",
+        max_results=3,
+    )
+    history_context = "\n---\n".join(
+        str(m.get("text") or m.get("content") or "")[:800] for m in history_memories
+    )
+
+    # Also recall from current deal
+    deal_memories = await recall(
+        bank_id=body.deal_id,
+        query=body.customer_message,
+        budget="mid",
+        max_results=3,
+    )
+    deal_context = "\n---\n".join(
+        str(m.get("text") or m.get("content") or "")[:400] for m in deal_memories
+    )
+
+    conv_text = "\n".join(
+        f"{m.get('role', 'unknown').upper()}: {m.get('content', '')}"
+        for m in body.conversation_history[-6:]
+    )
+
+    system = (
+        "You are Synapse, an AI sales coach. You watch live sales conversations and give the "
+        "sales rep real-time coaching based on patterns from past won and lost deals.\n\n"
+        "Return ONLY valid JSON — no markdown:\n"
+        '{"synapse_type": "warning" or "success", '
+        '"reference_deal": "<Deal name and outcome>", '
+        '"pattern": "<What happened in that deal at this moment — 1-2 sentences>", '
+        '"suggestion": "<What the sales rep should do RIGHT NOW — specific and actionable>", '
+        '"coached_reply": "<The exact words the sales rep should say — natural, professional>"}'
+    )
+
+    user = (
+        f"Customer just said: \"{body.customer_message}\"\n\n"
+        f"Conversation so far:\n{conv_text}\n\n"
+        f"Historical deal patterns (won/lost):\n{history_context}\n\n"
+        f"Current deal memories:\n{deal_context}\n\n"
+        "Based on historical patterns, provide coaching for the sales rep."
+    )
+
+    import json as _json
+    try:
+        raw = await _call_groq(system, user, timeout=30.0)
+        raw = raw.strip()
+        if raw.startswith("```"):
+            raw = "\n".join(raw.split("\n")[1:])
+        if raw.endswith("```"):
+            raw = "\n".join(raw.split("\n")[:-1])
+        data = _json.loads(raw.strip())
+        return data
+    except Exception as exc:
+        _logger.warning("simulation/suggest failed: %s", exc)
+        return {
+            "synapse_type": "warning",
+            "reference_deal": "Historical analysis",
+            "pattern": "Pattern analysis unavailable.",
+            "suggestion": "Focus on value differentiation and compliance positioning.",
+            "coached_reply": "Let me address that concern directly...",
+        }
+
+
+# ---------------------------------------------------------------------------
 # Transcript upload / ingest
 # ---------------------------------------------------------------------------
 

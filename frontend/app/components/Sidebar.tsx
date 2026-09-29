@@ -9,6 +9,7 @@ const NAV = [
   { label: "Chat", href: (d: string) => `/chat?deal=${d}`, icon: ChatIcon },
   { label: "Graph", href: (d: string) => `/graph?deal=${d}`, icon: GraphIcon },
   { label: "Insights", href: (d: string) => `/observations?deal=${d}`, icon: InsightIcon },
+  { label: "Simulate", href: (_d: string) => `/simulation`, icon: SimulateIcon },
 ];
 
 function ChatIcon() {
@@ -39,6 +40,13 @@ function InsightIcon() {
       <rect x="1" y="9" width="3" height="5" rx="1" stroke="currentColor" strokeWidth="1.2"/>
       <rect x="6" y="5" width="3" height="9" rx="1" stroke="currentColor" strokeWidth="1.2"/>
       <rect x="11" y="1" width="3" height="13" rx="1" stroke="currentColor" strokeWidth="1.2"/>
+    </svg>
+  );
+}
+function SimulateIcon() {
+  return (
+    <svg width="15" height="15" viewBox="0 0 15 15" fill="none">
+      <polygon points="3,2 13,7.5 3,13" stroke="currentColor" strokeWidth="1.2" strokeLinejoin="round" fill="none"/>
     </svg>
   );
 }
@@ -175,6 +183,7 @@ export default function Sidebar({ dealId, onDealChange }: SidebarProps) {
     if (pathname === "/chat" && href.startsWith("/chat")) return true;
     if (pathname === "/graph" && href.startsWith("/graph")) return true;
     if (pathname === "/observations" && href.startsWith("/observations")) return true;
+    if (pathname === "/simulation" && href.startsWith("/simulation")) return true;
     return false;
   };
 

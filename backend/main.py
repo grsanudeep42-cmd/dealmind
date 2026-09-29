@@ -77,6 +77,20 @@ async def lifespan(app: FastAPI):
             result2["calls_succeeded"], result2["calls_attempted"],
         )
 
+        # Seed historical deals (3 lost + 2 won) into historical-deals bank
+        from synthetic_data import HISTORICAL_DEALS, HISTORICAL_BANK_ID
+        _logger.info("Seeding %d historical deals into '%s' bank...", len(HISTORICAL_DEALS), HISTORICAL_BANK_ID)
+        for deal in HISTORICAL_DEALS:
+            ok = await retain(
+                bank_id=HISTORICAL_BANK_ID,
+                content=deal["content"],
+                document_id=deal["document_id"],
+            )
+            if ok:
+                _logger.info("  ✓ %s (%s)", deal["deal_name"], deal["outcome"])
+            else:
+                _logger.warning("  ✗ Failed to seed %s", deal["deal_name"])
+
         # Set mission AFTER banks exist (idempotent PATCH)
         for bank in [DEAL_ID, NOVATECH_DEAL_ID]:
             ok = await set_bank_mission(bank_id=bank, mission=_SALES_MISSION)

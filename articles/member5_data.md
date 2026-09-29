@@ -52,6 +52,9 @@ Each historical deal in `synthetic_data.py` follows this pattern:
 
 Every deal has: real-sounding names, a timeline of calls, specific numbers, the exact sequence of mistakes, and a `KEY MISTAKE` line that acts as the explicit lesson.
 
+![synthetic_data.py — HISTORICAL_DEALS showing 3 lost deals with narrative transcripts and KEY MISTAKE lines](member5_screenshot1_lostdeals.png)
+*Lines 354–398: The 3 lost deals — Meridian Corp ($380K), Apex Systems ($520K), and DataFlow Inc ($290K). Each has a timeline of calls, named stakeholders, and an explicit KEY MISTAKE line that Groq uses to generate specific pattern warnings.*
+
 ---
 
 ## Why Named Stakeholders Matter
@@ -76,6 +79,9 @@ We deliberately designed 3 lost deals and 2 won deals with complementary pattern
 
 This balance means Hindsight can recall both cautionary tales AND success patterns depending on what the customer is saying. The agent does not just warn — it can also confirm when the rep is on the right track.
 
+![synthetic_data.py — WON DEALS section showing TechVision and CloudBase with KEY SUCCESS lines](member5_screenshot2_wondeals.png)
+*Lines 410–448: The 2 won deals — TechVision ($340K) and CloudBase ($410K). Each has KEY SUCCESS lines showing exactly what the rep did right. When a customer message matches a won-deal pattern, Groq confirms the rep is on track instead of warning them.*
+
 ---
 
 ## Before / After — Data Quality Impact
@@ -87,6 +93,9 @@ This balance means Hindsight can recall both cautionary tales AND success patter
 **After (narrative data with KEY MISTAKE lines):**
 - Recall returns the full Meridian Corp transcript with Elena Vasquez blocking the deal in Week 5
 - Groq generates: "Do not touch pricing until InfoSec has formally signed off — same pattern killed Meridian at $380K"
+
+![DealMind Simulation — Hindsight memory strip showing DataFlow Inc and Meridian Corp recalled at Turn 1](member5_screenshot3_memorystrip.png)
+*The memory strip at the top of the coaching panel shows exactly which documents Hindsight retrieved. DataFlow Inc (LOST $290K) and Meridian Corp (LOST $380K) — the two most semantically similar past deals to the customer's multi-tenant question.*
 
 ---
 

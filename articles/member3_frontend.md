@@ -19,6 +19,9 @@ The simulation has two independent tracks:
 
 The critical product decision was to keep these tracks completely separate. Each plays on its own tab. When one is running, the other tab is disabled. This prevents users from accidentally comparing mid-flight states and keeps the narrative clean.
 
+![DealMind Simulation — With Synapse track showing coaching card, memory recall strip, and Deal Saved result](member3_screenshot1_coached.png)
+*The coached track at completion: Hindsight recalled TechVision (WON $340K) and CloudBase (WON $410K) to guide the rep through InfoSec sign-off and pricing. Deal closed at $480K ARR.*
+
 ---
 
 ## The Message Accumulation Problem
@@ -97,6 +100,9 @@ style={{
 ```
 
 Clean, simple, no state collision.
+
+![DealMind Simulation — Without Synapse track showing rep mistakes, no memory access, and Deal Lost result](member3_screenshot2_uncoached.png)
+*The uncoached track: no Hindsight recall, no coaching card. The right panel shows the exact mistakes — multi-tenant agreed (T1), GDPR unresolved (T2), discounted before InfoSec (T3). Weaviate won the contract.*
 
 ---
 

@@ -1,0 +1,23 @@
+services:
+  - type: web
+    name: dealmind-backend
+    runtime: docker
+    dockerfilePath: ./Dockerfile
+    dockerContext: .
+    plan: free
+    healthCheckPath: /health
+    envVars:
+      - key: HINDSIGHT_API_KEY
+        sync: false
+      - key: HINDSIGHT_PIPELINE_ID_ACME
+        sync: false
+      - key: HINDSIGHT_PIPELINE_ID_NOVATECH
+        sync: false
+      - key: GROQ_API_KEY
+        sync: false
+      - key: GROQ_MODEL
+        value: qwen/qwen3-32b
+      - key: MONGODB_URI
+        sync: false
+      - key: FRONTEND_URL
+        sync: false

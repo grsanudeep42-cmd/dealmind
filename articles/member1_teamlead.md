@@ -38,6 +38,9 @@ When a customer says something during a live deal, the recalled memories go stra
 
 Frontend is a Next.js app. Four main sections: Chat for live coaching, Graph for deal relationship mapping, Insights for risk scoring, and Simulate for the dual-track deal simulation. Backend is FastAPI running on Render.
 
+![DealMind System Architecture - Browser to Next.js to FastAPI to Groq and Hindsight memory banks](architecture_diagram.png)
+*Full system: Browser hits Next.js on Vercel, which calls FastAPI on Render. FastAPI fires retain/recall/reflect against Hindsight, then injects the recalled memories into Groq to generate the coaching card.*
+
 ![DealMind Chat - Synapse answering a live deal question using Hindsight memory](member1_screenshot1_chat.png)
 *Synapse recalls specific deal calls (Call #3, Call #5) to answer a CFO pricing question - grounded in actual deal transcripts, not generic advice.*
 
@@ -87,7 +90,13 @@ The hardest part was the data. Writing realistic historical deal transcripts tha
 
 We want to connect DealMind directly to CRM systems so deal transcripts get retained automatically after every call. Zero manual work. Every rep benefits from every deal the company has ever run, without anyone having to remember to log it.
 
-If you're building anything that needs AI to learn from organizational history, the Hindsight library from Vectorize is genuinely worth looking at: https://github.com/vectorize-io/hindsight
+If you're building anything that needs AI to learn from organizational history, Hindsight by Vectorize is genuinely worth a look:
+
+- GitHub: https://github.com/vectorize-io/hindsight
+- Hindsight platform: https://hindsight.vectorize.io/
+- What is agent memory: https://vectorize.io/what-is-agent-memory
 
 **GitHub:** https://github.com/grsanudeep42-cmd/dealmind
 **Demo video:** https://youtu.be/pxUxM-SIMSk
+
+*Shoutout to [@Code.in](https://code.in) for the platform that brought this challenge to us.*

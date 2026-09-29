@@ -1,0 +1,198 @@
+# LinkedIn Posts - All 6 Members
+
+===================================================================
+MEMBER 1 - Team Lead / Full-Stack
+===================================================================
+
+POST (under 800 chars):
+---
+We built an AI sales coach that actually remembers every deal your team has ever lost.
+
+Most sales knowledge dies when a deal closes. It sits in a CRM note nobody reads. We changed that.
+
+3 things we shipped:
+- Persistent deal memory using Hindsight by Vectorize
+- Real-time coaching mid-conversation, not after the call
+- A simulation showing the same $480K deal won vs lost - same rep, same customer, just memory on or off
+
+The difference is not the model. It's whether the agent remembers.
+
+Built with: Next.js, FastAPI, Groq, Hindsight
+
+GitHub: https://github.com/grsanudeep42-cmd/dealmind
+
+#AIAgents #AgentMemory #AI #LLM #Hindsight
+---
+
+FIRST COMMENT:
+Full article on how we built it: [paste your article URL here]
+
+SECOND COMMENT:
+Hindsight by Vectorize - the memory layer that made this possible: https://github.com/vectorize-io/hindsight
+
+
+===================================================================
+MEMBER 2 - Backend Engineer
+===================================================================
+
+POST (under 800 chars):
+---
+I wired persistent memory into a FastAPI sales agent using 3 functions.
+
+retain() - store a deal when it closes
+recall() - find the most relevant past deals mid-conversation
+reflect() - synthesise patterns across multiple memories
+
+That's it. That's the memory layer.
+
+The tricky part wasn't the API. It was the dual-bank recall strategy - one search across all historical deals, one across the current deal only. Combining both into one Groq prompt is what made the coaching specific instead of generic.
+
+GitHub: https://github.com/grsanudeep42-cmd/dealmind
+
+#AIAgents #FastAPI #AgentMemory #Hindsight #LLM
+---
+
+FIRST COMMENT:
+Full deep dive on the recall() pipeline: [paste your article URL here]
+
+SECOND COMMENT:
+Hindsight by Vectorize - memory for AI agents: https://github.com/vectorize-io/hindsight
+
+
+===================================================================
+MEMBER 3 - Frontend Engineer
+===================================================================
+
+POST (under 800 chars):
+---
+I built a UI that shows the same sales deal played out twice - once with AI memory, once without.
+
+Same customer. Same rep. Same objections. Completely different outcomes.
+
+3 things I learned:
+- Side-by-side split-screen looks good in Figma. Impossible to follow in a browser.
+- Tab locking when a simulation is running prevents state collisions. Simple fix, hours of debugging to find it.
+- Append-only message arrays fix disappearing chat bubbles. Never replace, always append.
+
+The simulation is the whole product in 5 minutes.
+
+GitHub: https://github.com/grsanudeep42-cmd/dealmind
+
+#NextJS #AIAgents #Frontend #AgentMemory #Hindsight
+---
+
+FIRST COMMENT:
+Full article on building the dual-track simulation: [paste your article URL here]
+
+SECOND COMMENT:
+Hindsight by Vectorize - the memory layer behind this: https://github.com/vectorize-io/hindsight
+
+
+===================================================================
+MEMBER 4 - AI/ML Engineer
+===================================================================
+
+POST (under 800 chars):
+---
+The LLM isn't what makes AI coaching good. The memory behind it is.
+
+Same model. Same prompt structure. Two very different outputs:
+
+Without memory: "Make sure to address compliance early."
+With memory: "Same pattern killed Meridian Corp at $380K. Elena Vasquez blocked it in Week 5 after the rep already committed to a discount. Don't touch pricing until InfoSec signs off."
+
+The model completed the pattern the retrieved memory set up. That's it.
+
+Used Hindsight by Vectorize for the recall layer. Two banks, 3 results each, labelled context sections in the prompt.
+
+GitHub: https://github.com/grsanudeep42-cmd/dealmind
+
+#PromptEngineering #AIAgents #LLM #AgentMemory #Hindsight
+---
+
+FIRST COMMENT:
+Full article on memory-grounded prompting: [paste your article URL here]
+
+SECOND COMMENT:
+Hindsight by Vectorize: https://github.com/vectorize-io/hindsight
+
+
+===================================================================
+MEMBER 5 - Data Engineer
+===================================================================
+
+POST (under 800 chars):
+---
+We thought writing synthetic data would take 30 minutes. It took a full day.
+
+And it was the most important work on the whole project.
+
+Here's what changes when you write narrative deal transcripts instead of placeholder data:
+
+Before: recall returns "vendor failed compliance requirements"
+After: recall returns Elena Vasquez blocking the Meridian Corp deal in Week 5 after the rep already agreed to a discount without InfoSec sign-off
+
+The model can only pattern-match what you give it. Vague data = vague coaching. Specific data = specific coaching.
+
+Build the data first. Everything else is retrieval.
+
+GitHub: https://github.com/grsanudeep42-cmd/dealmind
+
+#DataEngineering #AIAgents #AgentMemory #Hindsight #LLM
+---
+
+FIRST COMMENT:
+Full article on synthetic data design for agent memory: [paste your article URL here]
+
+SECOND COMMENT:
+Hindsight by Vectorize - agent memory infrastructure: https://github.com/vectorize-io/hindsight
+
+
+===================================================================
+MEMBER 6 - Product / Business
+===================================================================
+
+POST (under 800 chars):
+---
+Every sales team has institutional memory. Almost none of it is accessible during a live call.
+
+We built DealMind to fix that.
+
+Same $480K deal. Same rep. Same customer objections. Two outcomes:
+
+With memory: deal closed at full price
+Without memory: competitor won the contract
+
+The only variable was whether the agent remembered what happened the last 3 times this exact objection came up.
+
+Concrete takeaways:
+- Generic AI advice doesn't help reps who already know the theory
+- Specific memory of what actually happened does
+- The simulation was the only thing that made people say "I want this"
+
+GitHub: https://github.com/grsanudeep42-cmd/dealmind
+
+#AIAgents #SalesAI #AgentMemory #Hindsight #ProductThinking
+---
+
+FIRST COMMENT:
+Full article on the business case for AI with memory: [paste your article URL here]
+
+SECOND COMMENT:
+Hindsight by Vectorize: https://github.com/vectorize-io/hindsight
+
+
+===================================================================
+REDDIT POST (one post, any member submits)
+===================================================================
+
+Subreddit: r/llmdevs (or r/aiagents or r/sideproject)
+Type: Link post
+
+TITLE:
+How I built an AI sales coach that remembers every deal your team has ever lost
+
+URL:
+[paste Team Lead article URL - member 1's published article]
+
+===================================================================

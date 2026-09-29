@@ -93,5 +93,11 @@ The core value isn't the dashboard. It's one rep getting the right advice at the
 ---
 
 **GitHub:** https://github.com/grsanudeep42-cmd/dealmind
-**Hindsight:** https://github.com/vectorize-io/hindsight
 **Demo video:** https://youtu.be/pxUxM-SIMSk
+
+Resources on Hindsight and agent memory:
+- https://github.com/vectorize-io/hindsight
+- https://hindsight.vectorize.io/
+- https://vectorize.io/what-is-agent-memory
+
+*Shoutout to [@Code.in](https://code.in) for running this challenge.*

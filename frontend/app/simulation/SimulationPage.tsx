@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { useRouter } from "next/navigation";
 import Sidebar from "@/app/components/Sidebar";
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL || "https://dealmind-v2bg.onrender.com";
@@ -35,27 +34,14 @@ interface SimulationScript {
   historical_deals: HistoricalDeal[];
 }
 
-// ── Helpers ───────────────────────────────────────────────────────────────────
-
-function useTypewriter(text: string, speed = 18, active = false) {
-  const [displayed, setDisplayed] = useState("");
-  const [done, setDone] = useState(false);
-
-  useEffect(() => {
-    // Don't reset once done — message should stay visible
-    if (!active) return;
-    setDisplayed("");
-    setDone(false);
-    let i = 0;
-    const interval = setInterval(() => {
-      i++;
-      setDisplayed(text.slice(0, i));
-      if (i >= text.length) { clearInterval(interval); setDone(true); }
-    }, speed);
-    return () => clearInterval(interval);
-  }, [text, active, speed]);
-
-  return { displayed, done };
+interface MsgEntry {
+  id: string;
+  type: "customer" | "rep";
+  turnIndex: number;
+  text: string;
+  speaker: string;
+  avatar: string;
+  isRep: boolean;
 }
 
 // ── Avatar ────────────────────────────────────────────────────────────────────
@@ -66,9 +52,84 @@ function Avatar({ initials, color }: { initials: string; color: string }) {
       width: 36, height: 36, borderRadius: "50%", background: color,
       display: "flex", alignItems: "center", justifyContent: "center",
       fontSize: 12, fontWeight: 700, color: "#fff", flexShrink: 0,
-      letterSpacing: "0.02em",
     }}>
       {initials}
+    </div>
+  );
+}
+
+// ── Message Bubble ─────────────────────────────────────────────────────────────
+// Simple approach: always visible (opacity 1). Typewriter only on active msg.
+
+function MessageBubble({
+  msg, isActive, coached, onDone,
+}: {
+  msg: MsgEntry; isActive: boolean; coached?: boolean; onDone?: () => void;
+}) {
+  const [displayed, setDisplayed] = useState(isActive ? "" : msg.text);
+  const speedRef = useRef(14);
+
+  useEffect(() => {
+    if (!isActive) {
+      // Not the active message — show full text immediately
+      setDisplayed(msg.text);
+      return;
+    }
+    // Active — type it out
+    setDisplayed("");
+    let i = 0;
+    const interval = setInterval(() => {
+      i++;
+      setDisplayed(msg.text.slice(0, i));
+      if (i >= msg.text.length) {
+        clearInterval(interval);
+        if (onDone) onDone();
+      }
+    }, speedRef.current);
+    return () => clearInterval(interval);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isActive]);
+
+  const avatarColors: Record<string, string> = {
+    MW: "#3B82F6", PS: "#8B5CF6", RW: "#F59E0B", SR: "#14B8A6",
+  };
+  const avatarColor = avatarColors[msg.avatar] ?? "#64748B";
+
+  return (
+    <div style={{
+      display: "flex",
+      flexDirection: msg.isRep ? "row-reverse" : "row",
+      gap: 10, alignItems: "flex-start",
+      opacity: 1,
+      animation: "fadeIn 0.25s ease",
+    }}>
+      <Avatar initials={msg.avatar} color={avatarColor} />
+      <div style={{ maxWidth: "72%", display: "flex", flexDirection: "column", gap: 4, alignItems: msg.isRep ? "flex-end" : "flex-start" }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+          <span style={{ fontSize: 11, color: "var(--text-3)", fontWeight: 500 }}>{msg.speaker}</span>
+          {coached && (
+            <span style={{ fontSize: 9.5, fontWeight: 700, color: "#2DD4BF", background: "rgba(45,212,191,0.12)", padding: "2px 6px", borderRadius: 100 }}>
+              SYNAPSE-COACHED
+            </span>
+          )}
+        </div>
+        <div style={{
+          padding: "10px 13px",
+          borderRadius: msg.isRep ? "14px 4px 14px 14px" : "4px 14px 14px 14px",
+          background: msg.isRep
+            ? (coached ? "rgba(45,212,191,0.12)" : "rgba(99,102,241,0.15)")
+            : "var(--bg-card)",
+          border: msg.isRep
+            ? (coached ? "1px solid rgba(45,212,191,0.3)" : "1px solid rgba(99,102,241,0.2)")
+            : "1px solid var(--border)",
+          fontSize: 12.5, color: "var(--text-1)", lineHeight: 1.65,
+        }}>
+          {displayed}
+          {isActive && displayed.length < msg.text.length && (
+            <span style={{ animation: "blink 1s infinite", opacity: 0.7 }}>|</span>
+          )}
+        </div>
+      </div>
     </div>
   );
 }
@@ -78,10 +139,7 @@ function Avatar({ initials, color }: { initials: string; color: string }) {
 function CoachingCard({ turn, live }: { turn: ScriptTurn | null; live: boolean }) {
   if (!turn) {
     return (
-      <div style={{
-        flex: 1, display: "flex", flexDirection: "column", alignItems: "center",
-        justifyContent: "center", gap: 12, color: "var(--text-3)",
-      }}>
+      <div style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 12, color: "var(--text-3)" }}>
         <svg width="40" height="40" viewBox="0 0 40 40" fill="none">
           <circle cx="20" cy="20" r="18" stroke="var(--border)" strokeWidth="1.5"/>
           <circle cx="20" cy="20" r="6" stroke="var(--border)" strokeWidth="1.5"/>
@@ -100,19 +158,16 @@ function CoachingCard({ turn, live }: { turn: ScriptTurn | null; live: boolean }
   const isWarning = turn.synapse_type === "warning";
   const accentColor = isWarning ? "#EF4444" : "#22C55E";
   const bgColor = isWarning ? "rgba(239,68,68,0.08)" : "rgba(34,197,94,0.08)";
-  const icon = isWarning ? "⚠️" : "✅";
 
   return (
-    <div style={{ flex: 1, display: "flex", flexDirection: "column", gap: 14, animation: "fadeUp 0.3s ease" }}>
+    <div style={{ flex: 1, display: "flex", flexDirection: "column", gap: 14, animation: "fadeIn 0.3s ease" }}>
       <div style={{ padding: "10px 14px", borderRadius: 10, background: bgColor, border: `1px solid ${accentColor}30` }}>
         <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 6 }}>
-          <span style={{ fontSize: 16 }}>{icon}</span>
+          <span style={{ fontSize: 16 }}>{isWarning ? "⚠️" : "✅"}</span>
           <span style={{ fontSize: 11, fontWeight: 700, color: accentColor, letterSpacing: "0.05em", textTransform: "uppercase" }}>
             {isWarning ? "Pattern Warning" : "Best Practice"}
           </span>
-          {live && (
-            <span style={{ marginLeft: "auto", fontSize: 10, fontWeight: 600, color: "#A78BFA", background: "rgba(167,139,250,0.12)", padding: "2px 7px", borderRadius: 100 }}>LIVE</span>
-          )}
+          {live && <span style={{ marginLeft: "auto", fontSize: 10, fontWeight: 600, color: "#A78BFA", background: "rgba(167,139,250,0.12)", padding: "2px 7px", borderRadius: 100 }}>LIVE</span>}
         </div>
         <div style={{ fontSize: 12, fontWeight: 600, color: "var(--text-2)", marginBottom: 4 }}>{turn.synapse_reference_deal}</div>
         <div style={{ fontSize: 11.5, color: "var(--text-3)", lineHeight: 1.6 }}>{turn.synapse_pattern}</div>
@@ -135,52 +190,7 @@ function CoachingCard({ turn, live }: { turn: ScriptTurn | null; live: boolean }
   );
 }
 
-// ── Message Bubble ─────────────────────────────────────────────────────────────
-
-function MessageBubble({
-  speaker, avatar, avatarColor, message, isRep, coached, active, onDone,
-}: {
-  speaker: string; avatar: string; avatarColor: string; message: string;
-  isRep: boolean; coached?: boolean; active: boolean; onDone?: () => void;
-}) {
-  const { displayed, done } = useTypewriter(message, 14, active);
-  useEffect(() => { if (done && onDone) onDone(); }, [done, onDone]);
-
-  return (
-    <div style={{
-      display: "flex", flexDirection: isRep ? "row-reverse" : "row",
-      gap: 10, alignItems: "flex-start",
-      // Always visible once rendered — opacity 1 always
-      opacity: 1,
-      transform: "none",
-      animation: active ? "fadeUp 0.3s ease" : "none",
-    }}>
-      <Avatar initials={avatar} color={avatarColor} />
-      <div style={{ maxWidth: "72%", display: "flex", flexDirection: "column", gap: 4, alignItems: isRep ? "flex-end" : "flex-start" }}>
-        <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-          <span style={{ fontSize: 11, color: "var(--text-3)", fontWeight: 500 }}>{speaker}</span>
-          {coached && (
-            <span style={{ fontSize: 9.5, fontWeight: 700, color: "#2DD4BF", background: "rgba(45,212,191,0.12)", padding: "2px 6px", borderRadius: 100, letterSpacing: "0.04em" }}>
-              SYNAPSE-COACHED
-            </span>
-          )}
-        </div>
-        <div style={{
-          padding: "10px 13px",
-          borderRadius: isRep ? "14px 4px 14px 14px" : "4px 14px 14px 14px",
-          background: isRep ? (coached ? "rgba(45,212,191,0.12)" : "rgba(99,102,241,0.15)") : "var(--bg-card)",
-          border: isRep ? (coached ? "1px solid rgba(45,212,191,0.3)" : "1px solid rgba(99,102,241,0.2)") : "1px solid var(--border)",
-          fontSize: 12.5, color: "var(--text-1)", lineHeight: 1.65,
-        }}>
-          {active ? displayed : message}
-          {active && !done && <span style={{ animation: "blink 1s infinite", opacity: 0.7 }}>|</span>}
-        </div>
-      </div>
-    </div>
-  );
-}
-
-// ── Historical Deal Pills ──────────────────────────────────────────────────────
+// ── Deal Pills ────────────────────────────────────────────────────────────────
 
 function DealPills({ deals }: { deals: HistoricalDeal[] }) {
   return (
@@ -202,133 +212,155 @@ function DealPills({ deals }: { deals: HistoricalDeal[] }) {
   );
 }
 
-// ── Main Component ─────────────────────────────────────────────────────────────
+// ── Main ──────────────────────────────────────────────────────────────────────
 
 export default function SimulationPage() {
-  const router = useRouter();
   const [dealId, setDealId] = useState("acme-corp-deal");
-
   const [script, setScript] = useState<SimulationScript | null>(null);
-  const [loading, setLoading] = useState(true);
+  const [loadingScript, setLoadingScript] = useState(true);
   const [error, setError] = useState("");
 
-  const [visibleMessages, setVisibleMessages] = useState<{ id: string; type: "customer" | "rep"; turnIndex: number }[]>([]);
-  const [activeMessageId, setActiveMessageId] = useState<string | null>(null);
-  const [currentTurn, setCurrentTurn] = useState<number | null>(null);
-  const [playing, setPlaying] = useState(false);
-  const [speed, setSpeed] = useState(1);
-  const [done, setDone] = useState(false);
-  const [liveMode, setLiveMode] = useState(false);
-  const [liveCoaching, setLiveCoaching] = useState<ScriptTurn | null>(null);
-  const [liveLoading, setLiveLoading] = useState(false);
+  // All rendered messages (accumulate, never removed)
+  const [messages, setMessages] = useState<MsgEntry[]>([]);
+  // ID of the message currently being typed
+  const [activeId, setActiveId] = useState<string | null>(null);
+  // Which turn's coaching is showing
+  const [coachingTurn, setCoachingTurn] = useState<ScriptTurn | null>(null);
 
-  const scrollRef = useRef<HTMLDivElement>(null);
+  const [playing, setPlaying] = useState(false);
+  const [finished, setFinished] = useState(false);
+  const [speed, setSpeed] = useState(1);
+  const [liveMode, setLiveMode] = useState(false);
+  const [liveLoading, setLiveLoading] = useState(false);
+  const [currentTurnNum, setCurrentTurnNum] = useState<number | null>(null);
+
   const playingRef = useRef(false);
-  const turnIndexRef = useRef(0);
+  const turnRef = useRef(0);
+  const scrollRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     fetch(`${API_BASE}/simulation/script`)
       .then((r) => r.json())
-      .then((d) => { setScript(d); setLoading(false); })
-      .catch(() => { setError("Failed to load simulation. Backend may be warming up — try again in 30s."); setLoading(false); });
+      .then((d) => { setScript(d); setLoadingScript(false); })
+      .catch(() => { setError("Backend warming up — try again in 30s."); setLoadingScript(false); });
   }, []);
 
+  // Auto-scroll to bottom
   useEffect(() => {
     if (scrollRef.current) scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
-  }, [visibleMessages, activeMessageId]);
+  }, [messages, activeId]);
 
-  const delay = (ms: number) => new Promise((r) => setTimeout(r, ms / speed));
+  const sleep = (ms: number) => new Promise<void>((r) => setTimeout(r, ms / speed));
 
-  const runTurn = async (turnIdx: number) => {
+  // Promisified typewriter: resolves when typing finishes
+  const typeMessage = (id: string, text: string): Promise<void> => {
+    return new Promise((resolve) => {
+      setActiveId(id);
+      // Use a flag resolved by the bubble's onDone callback
+      const check = setInterval(() => {
+        // resolved via onDone callback on the bubble
+      }, 50);
+      // We just wait based on length — simpler and reliable
+      setTimeout(() => {
+        clearInterval(check);
+        setActiveId(null);
+        resolve();
+      }, (text.length * 14 + 200) / speed);
+    });
+  };
+
+  const runTurn = async (idx: number) => {
     if (!script || !playingRef.current) return;
-    const turn = script.script[turnIdx];
-    if (!turn) { setDone(true); setPlaying(false); return; }
+    const turn = script.script[idx];
+    if (!turn) { setFinished(true); setPlaying(false); return; }
 
-    setCurrentTurn(turn.turn);
+    setCurrentTurnNum(turn.turn);
 
-    // Show customer message
-    const custId = `cust-${turnIdx}`;
-    setVisibleMessages((prev) => [...prev, { id: custId, type: "customer", turnIndex: turnIdx }]);
-    setActiveMessageId(custId);
-    await delay(turn.customer_message.length * 14 + 600);
+    // 1. Add + type customer message
+    const custId = `cust-${idx}`;
+    const custMsg: MsgEntry = {
+      id: custId, type: "customer", turnIndex: idx,
+      text: turn.customer_message,
+      speaker: turn.customer_speaker,
+      avatar: turn.customer_avatar,
+      isRep: false,
+    };
+    setMessages((prev) => [...prev, custMsg]);
+    await typeMessage(custId, turn.customer_message);
     if (!playingRef.current) return;
 
-    // Coaching (live or script)
+    // 2. Show coaching card
     if (liveMode) {
       setLiveLoading(true);
       try {
-        const convHistory = script.script.slice(0, turnIdx).flatMap((t) => [
+        const history = script.script.slice(0, idx).flatMap((t) => [
           { role: "customer", content: t.customer_message },
           { role: "rep", content: t.coached_reply },
         ]);
         const res = await fetch(`${API_BASE}/simulation/suggest`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ deal_id: script.deal_id, customer_message: turn.customer_message, conversation_history: convHistory }),
+          method: "POST", headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ deal_id: script.deal_id, customer_message: turn.customer_message, conversation_history: history }),
         });
         const data = await res.json();
-        setLiveCoaching({ ...turn, synapse_type: data.synapse_type || turn.synapse_type, synapse_reference_deal: data.reference_deal || turn.synapse_reference_deal, synapse_pattern: data.pattern || turn.synapse_pattern, synapse_suggestion: data.suggestion || turn.synapse_suggestion, coached_reply: data.coached_reply || turn.coached_reply });
-      } catch { setLiveCoaching(turn); }
+        setCoachingTurn({ ...turn, synapse_type: data.synapse_type || turn.synapse_type, synapse_reference_deal: data.reference_deal || turn.synapse_reference_deal, synapse_pattern: data.pattern || turn.synapse_pattern, synapse_suggestion: data.suggestion || turn.synapse_suggestion, coached_reply: data.coached_reply || turn.coached_reply });
+      } catch { setCoachingTurn(turn); }
       setLiveLoading(false);
+    } else {
+      setCoachingTurn(turn);
     }
 
-    await delay(1400);
+    await sleep(1400);
     if (!playingRef.current) return;
 
-    // Show rep reply
-    const repId = `rep-${turnIdx}`;
-    setVisibleMessages((prev) => [...prev, { id: repId, type: "rep", turnIndex: turnIdx }]);
-    setActiveMessageId(repId);
-    await delay(turn.coached_reply.length * 14 + 900);
+    // 3. Add + type rep reply
+    const repId = `rep-${idx}`;
+    const repMsg: MsgEntry = {
+      id: repId, type: "rep", turnIndex: idx,
+      text: turn.coached_reply,
+      speaker: "Sarah — Sales Rep",
+      avatar: "SR",
+      isRep: true,
+    };
+    setMessages((prev) => [...prev, repMsg]);
+    await typeMessage(repId, turn.coached_reply);
     if (!playingRef.current) return;
 
-    setActiveMessageId(null);
-    await delay(900);
+    await sleep(1000);
 
-    turnIndexRef.current = turnIdx + 1;
-    if (turnIdx + 1 < script.script.length) {
-      runTurn(turnIdx + 1);
+    // 4. Next turn
+    turnRef.current = idx + 1;
+    if (idx + 1 < script.script.length) {
+      runTurn(idx + 1);
     } else {
-      setDone(true);
+      setFinished(true);
       setPlaying(false);
     }
   };
 
   const handlePlay = () => {
-    if (done) {
-      setVisibleMessages([]); setActiveMessageId(null);
-      setCurrentTurn(null); setDone(false);
-      turnIndexRef.current = 0; setLiveCoaching(null);
+    if (finished) {
+      setMessages([]); setActiveId(null); setCoachingTurn(null);
+      setFinished(false); setCurrentTurnNum(null);
+      turnRef.current = 0;
     }
     playingRef.current = true;
     setPlaying(true);
-    runTurn(turnIndexRef.current);
+    runTurn(turnRef.current);
   };
 
   const handlePause = () => { playingRef.current = false; setPlaying(false); };
-
-  const currentCoachingTurn = liveMode
-    ? liveCoaching
-    : currentTurn !== null && script
-      ? script.script.find((t) => t.turn === currentTurn) ?? null
-      : null;
-
-  const avatarColors: Record<string, string> = { MW: "#3B82F6", PS: "#8B5CF6", RW: "#F59E0B", SR: "#14B8A6" };
 
   return (
     <>
       <style>{`
         @keyframes blink { 0%,100%{opacity:1} 50%{opacity:0} }
-        @keyframes fadeUp { from{opacity:0;transform:translateY(10px)} to{opacity:1;transform:none} }
-        @keyframes pulse { 0%,100%{opacity:0.4} 50%{opacity:1} }
+        @keyframes fadeIn { from{opacity:0;transform:translateY(6px)} to{opacity:1;transform:none} }
+        @keyframes pulse { 0%,100%{opacity:0.35} 50%{opacity:1} }
       `}</style>
 
       <div style={{ display: "flex", height: "100vh", background: "var(--bg-base)", overflow: "hidden" }}>
+        <Sidebar dealId={dealId} onDealChange={setDealId} />
 
-        {/* ── Sidebar ── */}
-        <Sidebar dealId={dealId} onDealChange={(id) => setDealId(id)} />
-
-        {/* ── Main content ── */}
         <div style={{ flex: 1, display: "flex", flexDirection: "column", overflow: "hidden" }}>
 
           {/* Header */}
@@ -336,7 +368,7 @@ export default function SimulationPage() {
             <div>
               <div style={{ fontSize: 15, fontWeight: 700 }}>Deal Simulation</div>
               <div style={{ fontSize: 11.5, color: "var(--text-3)", marginTop: 2 }}>
-                {script?.deal_name ?? "Loading…"} · AI-coached conversation · {script?.script.length ?? 0} turns
+                {script?.deal_name ?? "Loading…"} · AI-coached · {script?.script.length ?? 0} turns
               </div>
             </div>
             <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
@@ -346,56 +378,60 @@ export default function SimulationPage() {
               {[1, 2, 3].map((s) => (
                 <button key={s} onClick={() => setSpeed(s)} style={{ padding: "6px 10px", borderRadius: 8, fontSize: 11.5, fontWeight: 600, background: speed === s ? "var(--bg-active)" : "var(--bg-card)", border: `1px solid ${speed === s ? "var(--accent)" : "var(--border)"}`, color: speed === s ? "var(--text-1)" : "var(--text-3)", cursor: "pointer" }}>{s}×</button>
               ))}
-              <button onClick={playing ? handlePause : handlePlay} style={{ padding: "8px 20px", borderRadius: 10, fontSize: 13, fontWeight: 700, background: playing ? "rgba(239,68,68,0.15)" : "var(--accent)", border: playing ? "1px solid rgba(239,68,68,0.3)" : "none", color: playing ? "#EF4444" : "#fff", cursor: "pointer" }}>
-                {done ? "↩ Restart" : playing ? "⏸ Pause" : visibleMessages.length > 0 ? "▶ Resume" : "▶ Play"}
+              <button onClick={playing ? handlePause : handlePlay} disabled={loadingScript} style={{ padding: "8px 20px", borderRadius: 10, fontSize: 13, fontWeight: 700, background: playing ? "rgba(239,68,68,0.15)" : "var(--accent)", border: playing ? "1px solid rgba(239,68,68,0.3)" : "none", color: playing ? "#EF4444" : "#fff", cursor: loadingScript ? "not-allowed" : "pointer", opacity: loadingScript ? 0.5 : 1 }}>
+                {finished ? "↩ Restart" : playing ? "⏸ Pause" : messages.length > 0 ? "▶ Resume" : "▶ Play"}
               </button>
             </div>
           </div>
 
           {/* Memory context bar */}
           {script && (
-            <div style={{ padding: "10px 24px", borderBottom: "1px solid var(--border-muted)", display: "flex", alignItems: "center", gap: 12, flexShrink: 0, background: "rgba(255,255,255,0.01)" }}>
+            <div style={{ padding: "10px 24px", borderBottom: "1px solid var(--border-muted)", display: "flex", alignItems: "center", gap: 12, flexShrink: 0 }}>
               <span style={{ fontSize: 10.5, fontWeight: 700, color: "var(--text-3)", letterSpacing: "0.06em", textTransform: "uppercase", flexShrink: 0 }}>Memory Context</span>
               <DealPills deals={script.historical_deals} />
             </div>
           )}
 
-          {/* Error state */}
           {error && (
-            <div style={{ margin: 24, padding: 16, borderRadius: 10, background: "rgba(239,68,68,0.08)", border: "1px solid rgba(239,68,68,0.2)", fontSize: 13, color: "#FCA5A5" }}>{error}</div>
+            <div style={{ margin: "16px 24px", padding: 14, borderRadius: 10, background: "rgba(239,68,68,0.08)", border: "1px solid rgba(239,68,68,0.2)", fontSize: 13, color: "#FCA5A5" }}>{error}</div>
           )}
 
-          {/* Split: conversation + coaching */}
+          {/* Split */}
           <div style={{ flex: 1, display: "flex", overflow: "hidden" }}>
 
-            {/* Conversation */}
-            <div ref={scrollRef} style={{ flex: 1, overflowY: "auto", padding: "24px 28px", display: "flex", flexDirection: "column", gap: 20, borderRight: "1px solid var(--border)" }}>
-              {visibleMessages.length === 0 && !error && (
+            {/* Conversation column */}
+            <div ref={scrollRef} style={{ flex: 1, overflowY: "auto", padding: "24px 28px", display: "flex", flexDirection: "column", gap: 18, borderRight: "1px solid var(--border)" }}>
+
+              {messages.length === 0 && !error && (
                 <div style={{ margin: "auto", textAlign: "center", color: "var(--text-3)", maxWidth: 320 }}>
                   <div style={{ fontSize: 40, marginBottom: 16 }}>🎬</div>
                   <div style={{ fontSize: 14, fontWeight: 600, marginBottom: 8, color: "var(--text-2)" }}>AI-Coached Sales Simulation</div>
                   <div style={{ fontSize: 12.5, lineHeight: 1.7 }}>
-                    Watch Synapse coach the sales rep in real time, drawing on 3 lost and 2 won deals to prevent the same mistakes.
+                    Watch Synapse coach the sales rep in real time, drawing on 3 lost deals and 2 won deals to prevent the same mistakes.
                   </div>
-                  <div style={{ marginTop: 20, fontSize: 12, color: "var(--text-3)" }}>Press <strong style={{ color: "var(--text-2)" }}>▶ Play</strong> to begin</div>
+                  <div style={{ marginTop: 20, fontSize: 12 }}>
+                    Press <strong style={{ color: "var(--text-2)" }}>▶ Play</strong> to begin
+                  </div>
                 </div>
               )}
 
-              {visibleMessages.map((msg) => {
-                const turn = script!.script[msg.turnIndex];
-                if (msg.type === "customer") {
-                  return <MessageBubble key={msg.id} speaker={turn.customer_speaker} avatar={turn.customer_avatar} avatarColor={avatarColors[turn.customer_avatar] ?? "#64748B"} message={turn.customer_message} isRep={false} active={activeMessageId === msg.id} />;
-                }
-                return <MessageBubble key={msg.id} speaker="Sarah — Sales Rep" avatar="SR" avatarColor={avatarColors.SR} message={turn.coached_reply} isRep={true} coached={true} active={activeMessageId === msg.id} />;
-              })}
+              {/* All messages — they accumulate and never disappear */}
+              {messages.map((msg) => (
+                <MessageBubble
+                  key={msg.id}
+                  msg={msg}
+                  isActive={activeId === msg.id}
+                  coached={msg.isRep}
+                />
+              ))}
 
-              {done && (
-                <div style={{ padding: "16px 18px", borderRadius: 12, background: "rgba(34,197,94,0.08)", border: "1px solid rgba(34,197,94,0.25)", textAlign: "center", animation: "fadeUp 0.4s ease" }}>
-                  <div style={{ fontSize: 20, marginBottom: 6 }}>🎉</div>
+              {finished && (
+                <div style={{ padding: "16px 18px", borderRadius: 12, background: "rgba(34,197,94,0.08)", border: "1px solid rgba(34,197,94,0.25)", textAlign: "center", animation: "fadeIn 0.4s ease" }}>
+                  <div style={{ fontSize: 22, marginBottom: 6 }}>🎉</div>
                   <div style={{ fontSize: 13, fontWeight: 700, color: "#22C55E", marginBottom: 4 }}>Deal Saved!</div>
                   <div style={{ fontSize: 12, color: "var(--text-3)", lineHeight: 1.6 }}>
                     Synapse coaching avoided 2 deal-killing mistakes from past lost deals.<br/>
-                    AMD-2024-047 pre-signed. Commercial close scheduled. $480K ARR secured.
+                    AMD-2024-047 signed · Close call scheduled · $480K ARR secured.
                   </div>
                 </div>
               )}
@@ -406,29 +442,30 @@ export default function SimulationPage() {
               <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
                 <div style={{ width: 8, height: 8, borderRadius: "50%", background: playing ? "#22C55E" : "var(--text-3)", boxShadow: playing ? "0 0 6px #22C55E" : "none", animation: playing ? "pulse 1.5s infinite" : "none" }} />
                 <span style={{ fontSize: 12, fontWeight: 700, color: "var(--text-2)" }}>Synapse Coach</span>
-                {currentTurn !== null && script && (
-                  <span style={{ marginLeft: "auto", fontSize: 11, color: "var(--text-3)" }}>Turn {currentTurn}/{script.script.length}</span>
+                {currentTurnNum !== null && script && (
+                  <span style={{ marginLeft: "auto", fontSize: 11, color: "var(--text-3)" }}>Turn {currentTurnNum}/{script.script.length}</span>
                 )}
               </div>
 
               {liveLoading ? (
                 <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-                  {[80, 60, 90].map((w, i) => (
-                    <div key={i} style={{ height: 14, borderRadius: 7, background: "var(--border)", width: `${w}%`, animation: "pulse 1s infinite" }} />
+                  {[80, 55, 90, 65].map((w, i) => (
+                    <div key={i} style={{ height: 13, borderRadius: 7, background: "var(--border)", width: `${w}%`, animation: "pulse 1.2s infinite" }} />
                   ))}
                   <div style={{ fontSize: 11, color: "#A78BFA", marginTop: 4 }}>⚡ Groq analysing pattern…</div>
                 </div>
               ) : (
-                <CoachingCard turn={currentCoachingTurn} live={liveMode} />
+                <CoachingCard turn={coachingTurn} live={liveMode} />
               )}
 
-              {script && script.script.length > 0 && (
+              {/* Progress bar */}
+              {script && (
                 <div style={{ display: "flex", gap: 5, marginTop: "auto", paddingTop: 12 }}>
                   {script.script.map((t) => {
-                    const isComplete = visibleMessages.some((m) => m.turnIndex === t.turn - 1 && m.type === "rep");
-                    const isCurrent = currentTurn === t.turn;
+                    const done = messages.some((m) => m.type === "rep" && m.turnIndex === t.turn - 1);
+                    const active = currentTurnNum === t.turn;
                     return (
-                      <div key={t.turn} style={{ flex: 1, height: 3, borderRadius: 2, background: isComplete ? "#22C55E" : isCurrent ? "#A78BFA" : "var(--border)", transition: "background 0.4s ease" }} />
+                      <div key={t.turn} style={{ flex: 1, height: 3, borderRadius: 2, background: done ? "#22C55E" : active ? "#A78BFA" : "var(--border)", transition: "background 0.4s" }} />
                     );
                   })}
                 </div>

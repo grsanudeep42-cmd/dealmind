@@ -42,7 +42,8 @@ function useTypewriter(text: string, speed = 18, active = false) {
   const [done, setDone] = useState(false);
 
   useEffect(() => {
-    if (!active) { setDisplayed(""); setDone(false); return; }
+    // Don't reset once done — message should stay visible
+    if (!active) return;
     setDisplayed("");
     setDone(false);
     let i = 0;
@@ -149,9 +150,10 @@ function MessageBubble({
     <div style={{
       display: "flex", flexDirection: isRep ? "row-reverse" : "row",
       gap: 10, alignItems: "flex-start",
-      opacity: active || done ? 1 : 0,
-      transform: active || done ? "none" : "translateY(8px)",
-      transition: "opacity 0.3s ease, transform 0.3s ease",
+      // Always visible once rendered — opacity 1 always
+      opacity: 1,
+      transform: "none",
+      animation: active ? "fadeUp 0.3s ease" : "none",
     }}>
       <Avatar initials={avatar} color={avatarColor} />
       <div style={{ maxWidth: "72%", display: "flex", flexDirection: "column", gap: 4, alignItems: isRep ? "flex-end" : "flex-start" }}>

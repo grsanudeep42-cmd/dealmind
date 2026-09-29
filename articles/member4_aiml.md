@@ -44,6 +44,9 @@ user = (
 
 The `history_context` is the concatenated text of the top 3 recalled historical deal documents. The `deal_context` is from the current deal's own memory bank.
 
+![deal_agent.py — Groq system prompt defining JSON output schema and user prompt injecting recalled memory](member4_screenshot1_groqprompt.png)
+*Lines 759–776: The system prompt locks Groq into returning structured JSON with 5 fields. The user prompt injects the customer message, conversation history, recalled historical deals, and current deal memories — all in one call.*
+
 ---
 
 ## How Memory Changes the Output
@@ -73,6 +76,9 @@ With the Meridian Corp memory retrieved (lost $380K because price was negotiated
 ```
 
 The difference is not the model. The difference is the memory. The model is completing the pattern that the retrieved Meridian Corp transcript sets up.
+
+![DealMind Simulation — Turn 1 coaching card showing Pattern Warning with DataFlow Inc recalled from Hindsight](member4_screenshot2_coachingcard.png)
+*Turn 1: Customer asks about multi-tenant architecture. Hindsight recalls DataFlow Inc (LOST $290K) and Meridian Corp (LOST $380K). Groq generates a Pattern Warning with the exact coached reply — all in one API call.*
 
 ---
 

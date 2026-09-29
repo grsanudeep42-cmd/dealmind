@@ -127,14 +127,20 @@ export default function GraphPageInner() {
   const currentGraphData = graphMode === "entity" ? entityData : assocData;
 
   // Configure d3 forces after graph mounts + data arrives so nodes spread apart
+  // ForceGraph is async-loaded, so we depend on it too — fires again when it's ready
   useEffect(() => {
-    if (!fgRef.current || !currentGraphData) return;
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const fg = fgRef.current as any;
-    fg.d3Force("charge")?.strength(graphMode === "associative" ? -500 : -400);
-    fg.d3Force("link")?.distance(graphMode === "associative" ? 100 : 70);
-    fg.d3ReheatSimulation?.();
-  }, [currentGraphData, graphMode]);
+    if (!currentGraphData || !ForceGraph) return;
+    // fgRef.current is populated after ForceGraph renders — use setTimeout to wait one tick
+    const timer = setTimeout(() => {
+      if (!fgRef.current) return;
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const fg = fgRef.current as any;
+      fg.d3Force("charge")?.strength(graphMode === "associative" ? -500 : -400);
+      fg.d3Force("link")?.distance(graphMode === "associative" ? 100 : 70);
+      fg.d3ReheatSimulation?.();
+    }, 50);
+    return () => clearTimeout(timer);
+  }, [currentGraphData, graphMode, ForceGraph]);
 
   const fgData = currentGraphData
     ? {

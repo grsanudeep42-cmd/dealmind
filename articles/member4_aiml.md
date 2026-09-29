@@ -1,36 +1,36 @@
-# Memory-Grounded Prompting: How Retrieved Deal History Changes What an LLM Generates
+# Memory-Grounded Prompting - How Retrieved Deal History Changes What an LLM Actually Generates
 
-*Role: AI/ML Engineer | Publish to: Medium / Dev.to / Hashnode*
+*Role: AI/ML Engineer*
 
 ---
 
-There is a common misconception about retrieval-augmented generation: that the retrieval step is just a fancy document lookup and the LLM does all the real work.
+There's a misconception I kept running into when we started this project. People treat retrieval-augmented generation like the retrieval step is just a fancier search engine, and the LLM does all the real work.
 
-After building DealMind's coaching engine, I can tell you the opposite is true. The quality of the retrieved memory determines almost everything about the quality of the generated output. The LLM is just pattern completion — it completes the pattern that the retrieved context sets up.
+After building DealMind's coaching engine, I can tell you it's the other way around. The quality of what gets retrieved almost entirely determines the quality of what gets generated. The LLM is pattern completion - it completes the pattern the retrieved context sets up. Give it a vague pattern, you get vague output. Give it a specific, narrative-rich memory, and the output gets specific and narrative-rich too.
 
-Here is what I learned building a memory-grounded coaching system with Vectorize Hindsight and Groq.
+Here's what I learned building this.
 
 ---
 
 ## The Prompt Structure
 
-Every coaching turn in DealMind fires a single Groq call. The system prompt defines the agent's role and output format:
+Every coaching turn in DealMind fires one Groq call. The system prompt defines the agent's role and locks the output format:
 
 ```python
 system = (
     "You are Synapse, an AI sales coach. You watch live sales conversations "
     "and give the sales rep real-time coaching based on patterns from "
     "past won and lost deals.\n\n"
-    "Return ONLY valid JSON — no markdown:\n"
+    "Return ONLY valid JSON - no markdown:\n"
     '{"synapse_type": "warning" or "success", '
     '"reference_deal": "<Deal name and outcome>", '
-    '"pattern": "<What happened in that deal — 1-2 sentences>", '
+    '"pattern": "<What happened in that deal - 1-2 sentences>", '
     '"suggestion": "<What the rep should do RIGHT NOW>", '
     '"coached_reply": "<The exact words the rep should say>"}'
 )
 ```
 
-The user prompt injects the retrieved memories:
+The user prompt is where the retrieved memories go in:
 
 ```python
 user = (
@@ -42,16 +42,16 @@ user = (
 )
 ```
 
-The `history_context` is the concatenated text of the top 3 recalled historical deal documents. The `deal_context` is from the current deal's own memory bank.
+`history_context` is the concatenated text of the top 3 recalled historical deal documents. `deal_context` comes from the current deal's own memory bank. Both are labelled clearly in the prompt - that labelling matters more than you'd expect.
 
-![deal_agent.py — Groq system prompt defining JSON output schema and user prompt injecting recalled memory](member4_screenshot1_groqprompt.png)
-*Lines 759–776: The system prompt locks Groq into returning structured JSON with 5 fields. The user prompt injects the customer message, conversation history, recalled historical deals, and current deal memories — all in one call.*
+![deal_agent.py - Groq system prompt defining JSON output schema and user prompt injecting recalled memory](member4_screenshot1_groqprompt.png)
+*Lines 759-776: The system prompt locks Groq into returning structured JSON with 5 fields. The user prompt injects the customer message, conversation history, recalled historical deals, and current deal memories - all in one call.*
 
 ---
 
-## How Memory Changes the Output
+## How Memory Actually Changes the Output
 
-This is the key finding. Without retrieved memory, Groq generates generic coaching:
+This is the thing worth paying attention to. Without retrieved memory in the prompt, Groq generates generic coaching:
 
 ```json
 {
@@ -63,32 +63,30 @@ This is the key finding. Without retrieved memory, Groq generates generic coachi
 }
 ```
 
-With the Meridian Corp memory retrieved (lost $380K because price was negotiated before InfoSec sign-off), Groq generates specific, grounded coaching:
+Fine. Forgettable. Useless in a live negotiation.
+
+With the Meridian Corp memory recalled - $380K lost because the rep agreed to a discount before getting InfoSec sign-off - Groq generates something genuinely useful:
 
 ```json
 {
   "synapse_type": "warning",
-  "reference_deal": "Meridian Corp — LOST $380K",
+  "reference_deal": "Meridian Corp - LOST $380K",
   "pattern": "Rep agreed to a 15% discount in Week 3 before InfoSec gatekeeper Elena Vasquez had been engaged. When Elena joined in Week 5, she blocked the multi-tenant architecture. No leverage left.",
   "suggestion": "Do not discuss pricing until Priya Sharma (InfoSec) has formally signed off. Lock compliance first, price second.",
   "coached_reply": "Robert, before we talk numbers I want to make sure Priya has everything she needs from our compliance team. Once InfoSec is locked, we can look at commercial terms together."
 }
 ```
 
-The difference is not the model. The difference is the memory. The model is completing the pattern that the retrieved Meridian Corp transcript sets up.
+Same model. Same output schema. Completely different output. The model is completing the pattern that the Meridian Corp transcript sets up. Without that memory, it has nothing specific to pattern-match against, so it falls back to generic advice.
 
-![DealMind Simulation — Turn 1 coaching card showing Pattern Warning with DataFlow Inc recalled from Hindsight](member4_screenshot2_coachingcard.png)
-*Turn 1: Customer asks about multi-tenant architecture. Hindsight recalls DataFlow Inc (LOST $290K) and Meridian Corp (LOST $380K). Groq generates a Pattern Warning with the exact coached reply — all in one API call.*
+![DealMind Simulation - Turn 1 coaching card showing Pattern Warning with DataFlow Inc recalled from Hindsight](member4_screenshot2_coachingcard.png)
+*Turn 1: Customer asks about multi-tenant architecture. Hindsight recalls DataFlow Inc (LOST $290K) and Meridian Corp (LOST $380K). Groq generates a Pattern Warning with the exact coached reply - all in one API call.*
 
 ---
 
 ## The Dual-Bank Strategy
 
-We use two separate Hindsight banks. Historical deals bank (`historical-deals`) for cross-company pattern matching. Current deal bank (`acme-corp-deal`) for deal-specific context.
-
-The budget parameter controls retrieval depth:
-- `budget="high"` for historical (we want thorough cross-deal search)
-- `budget="mid"` for current deal (faster, we just need recent call notes)
+We use two separate Hindsight banks. One for all historical deals, one per active deal.
 
 ```python
 history_memories = await recall(
@@ -106,11 +104,19 @@ deal_memories = await recall(
 )
 ```
 
+`budget="high"` for historical - we want thorough cross-deal search. `budget="mid"` for current deal - faster, we just need recent call notes from this specific deal. The results from both go into clearly labelled sections of the user prompt.
+
+The labelling is not optional. Early on we just dumped both into one block. The model would mix up which context was historical and which was current-deal, and the coaching became inconsistent. Adding explicit headers - "Historical deal patterns (won/lost)" and "Current deal memories" - fixed it almost immediately.
+
 ---
 
-## One Honest Lesson
+## The Thing That Surprised Me Most
 
-We initially put all the retrieved text into one giant context block. The model lost focus — it would cite irrelevant deal details and give generic advice. Breaking the context into clearly labelled sections (`Historical deal patterns` vs `Current deal memories`) with explicit headers made the model much more precise. Structure in the prompt produces structure in the output.
+I expected prompt engineering to be the hard part. Finding the right system prompt wording, getting the JSON schema to work reliably, handling edge cases in the output parsing.
+
+That stuff was hard, but it wasn't the hardest part. The hardest part was realising how much the quality of the prompt depends on the quality of what's in memory. A beautifully engineered prompt fed garbage memories still produces garbage coaching. You can't engineer your way out of bad data upstream.
+
+If the Meridian Corp transcript just said "lost $380K - compliance issues," no prompt in the world would generate the specific, actionable coaching we needed. The transcript had to include Elena Vasquez's name, the Week 5 timeline, the specific sequence of mistakes. That narrative richness is what the model latches onto.
 
 ---
 

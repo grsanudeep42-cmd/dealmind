@@ -511,3 +511,51 @@ SIMULATION_SCRIPT = [
         "coaching_outcome": "Deal closing sequence initiated. InfoSec locked. CFO targeted for commercial close.",
     },
 ]
+
+# ---------------------------------------------------------------------------
+# "Without Synapse" script — same customers, wrong rep replies → deal LOST
+# Shows what happens when the rep has no AI coaching and repeats past mistakes
+# ---------------------------------------------------------------------------
+
+SIMULATION_SCRIPT_UNCOACHED = [
+    {
+        "turn": 1,
+        "customer_speaker": "Marcus Webb — VP Engineering",
+        "customer_avatar": "MW",
+        "customer_message": "We're evaluating your platform for our vector database migration. To keep infrastructure costs down, we'd need this to run on shared multi-tenant architecture.",
+        "rep_mistake": "Agreed to explore multi-tenant — same mistake as DataFlow Inc (LOST $290K)",
+        "rep_reply": "That makes complete sense — multi-tenant is definitely something we can explore. Sharing infrastructure does keep costs down. I'll flag it to our engineering team and we can see what options are available.",
+    },
+    {
+        "turn": 2,
+        "customer_speaker": "Priya Sharma — Head of InfoSec",
+        "customer_avatar": "PS",
+        "customer_message": "Before we go any further — we have a hard requirement for EU-only data residency under GDPR. This is non-negotiable. We've had vendors promise this and fail at contract stage.",
+        "rep_mistake": "Promised to 'check back' instead of confirming pre-approved amendment — same mistake as Meridian Corp (LOST $380K)",
+        "rep_reply": "Absolutely, data residency is very important and we take compliance seriously. I'll need to check with our compliance team on the EU-specific details and get back to you by early next week. We should be able to support that.",
+    },
+    {
+        "turn": 3,
+        "customer_speaker": "Robert Walsh — CFO",
+        "customer_avatar": "RW",
+        "customer_message": "I've reviewed the proposal. $520K is above our approved budget ceiling. We need to talk about bringing this down significantly — or we'll have to reconsider.",
+        "rep_mistake": "Discounted immediately without InfoSec buy-in — identical to Meridian Corp mistake (LOST $380K)",
+        "rep_reply": "I completely understand budget constraints. Let me see what I can do — I think I can bring this down to $440K, and if we need to push further, possibly $420K. I want to make this work for you. Budget shouldn't be the reason we don't move forward.",
+    },
+    {
+        "turn": 4,
+        "customer_speaker": "Marcus Webb — VP Engineering",
+        "customer_avatar": "MW",
+        "customer_message": "We've also been talking to Weaviate. They're offering similar specs at about 20% less. Why should we choose you over them?",
+        "rep_mistake": "Competed on price instead of compliance — opposite of CloudBase Inc winning move (WON $410K)",
+        "rep_reply": "Weaviate is a solid product, but we have better support and more features. In terms of pricing — I can get our number competitive with what they're offering. Price shouldn't be the deciding factor. I'm confident we can match or beat them on value.",
+    },
+    {
+        "turn": 5,
+        "customer_speaker": "Priya Sharma — Head of InfoSec",
+        "customer_avatar": "PS",
+        "customer_message": "Following up — our legal team reviewed the multi-tenant proposal from Week 1. It fails our GDPR data isolation requirements. We're still waiting on EU residency confirmation from two weeks ago. Given these unresolved blockers, and Weaviate offering dedicated hosting at a lower price point, we've decided to move forward with them. Thank you for your time.",
+        "rep_mistake": "Deal collapsed: multi-tenant agreed in Turn 1, GDPR left unresolved in Turn 2, discounted before InfoSec sign-off in Turn 3. All three mistakes together.",
+        "rep_reply": "I— I understand. I'm sorry we weren't able to resolve those concerns in time. Would you be open to a quick call to see if we can address the GDPR documentation before you finalise with Weaviate?",
+    },
+]

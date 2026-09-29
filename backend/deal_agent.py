@@ -694,17 +694,19 @@ async def get_risk_score(deal_id: str) -> dict[str, Any]:
 
 @router.get("/simulation/script")
 async def get_simulation_script() -> dict[str, Any]:
-    """Return the pre-built simulation script for the Acme Corp deal."""
-    from synthetic_data import SIMULATION_SCRIPT, HISTORICAL_DEALS
+    """Return the pre-built simulation script (coached + uncoached) for the Acme Corp deal."""
+    from synthetic_data import SIMULATION_SCRIPT, SIMULATION_SCRIPT_UNCOACHED, HISTORICAL_DEALS
     return {
         "deal_id": DEAL_ID,
         "deal_name": "Acme Corp — $480K ARR",
         "script": SIMULATION_SCRIPT,
+        "uncoached_script": SIMULATION_SCRIPT_UNCOACHED,
         "historical_deals": [
             {"deal_name": d["deal_name"], "value": d["value"], "outcome": d["outcome"], "reason": d.get("lost_reason") or d.get("won_reason", "")}
             for d in HISTORICAL_DEALS
         ],
     }
+
 
 
 class SimulateSuggestRequest(BaseModel):

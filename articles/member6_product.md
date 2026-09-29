@@ -50,11 +50,17 @@ We built a simulation to demonstrate the before/after clearly. We take one real 
 - Turn 2: Customer raises GDPR. Agent recalls TechVision ($340K won). Rep confirms compliance on the spot.
 - Turn 5: Deal signed. $480K ARR secured.
 
+![DealMind Simulation — With Synapse: Deal Saved $480K ARR. TechVision and CloudBase recalled. Coaching card showing Best Practice.](member6_screenshot1_dealsaved.png)
+*With Synapse: Hindsight recalled TechVision (WON $340K) and CloudBase (WON $410K). The rep followed the InfoSec-first pattern, locked compliance before pricing, and closed at full value.*
+
 **Without Synapse (no memory):**
 - Turn 1: Customer asks about multi-tenant. Rep agrees to explore it.
 - Turn 2: Customer raises GDPR. Rep defers to compliance team.
 - Turn 3: CFO pushes for discount. Rep folds without InfoSec sign-off.
 - Turn 5: Customer rejects. Weaviate wins. $480K gone.
+
+![DealMind Simulation — Without Synapse: Deal Lost $480K ARR Gone. No memory access. Rep repeated 3 mistakes from past deals.](member6_screenshot2_deallost.png)
+*Without Synapse: No Hindsight recall. No coaching. The right panel shows the exact mistakes — multi-tenant agreed (T1), GDPR unresolved (T2), discounted before InfoSec sign-off (T3). Same mistakes as DataFlow ($290K), Meridian ($380K), and Apex ($520K).*
 
 Same rep. Same customer. Same objections. The only difference is whether the agent had access to the memory of what happened before.
 

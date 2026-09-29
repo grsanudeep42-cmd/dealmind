@@ -154,3 +154,32 @@ export async function getDealObservations(dealId: string): Promise<ObservationsD
 export async function checkHealth(): Promise<{ status: string }> {
   return apiFetch("/health");
 }
+
+export interface UploadTranscriptResponse {
+  status: string;
+  deal_id: string;
+  document_id: string;
+  call_number: number;
+  message: string;
+}
+
+export async function uploadTranscript(
+  dealId: string,
+  callNumber: number,
+  file: File
+): Promise<UploadTranscriptResponse> {
+  const formData = new FormData();
+  formData.append("file", file);
+  formData.append("call_number", String(callNumber));
+
+  const base = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8001";
+  const res = await fetch(
+    `${base}/deal/${encodeURIComponent(dealId)}/ingest`,
+    { method: "POST", body: formData }
+  );
+  if (!res.ok) {
+    const text = await res.text();
+    throw new Error(`Upload failed (${res.status}): ${text}`);
+  }
+  return res.json();
+}

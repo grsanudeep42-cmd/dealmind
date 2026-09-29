@@ -155,6 +155,20 @@ export async function checkHealth(): Promise<{ status: string }> {
   return apiFetch("/health");
 }
 
+export interface RiskScore {
+  deal_id: string;
+  score: number;               // 0–100
+  level: "Low" | "Medium" | "High" | "Critical";
+  top_risks: string[];
+  positive_signals: string[];
+  summary: string;
+}
+
+export async function getDealRiskScore(dealId: string): Promise<RiskScore> {
+  return apiFetch(`/deal/${encodeURIComponent(dealId)}/risk-score`);
+}
+
+
 export interface UploadTranscriptResponse {
   status: string;
   deal_id: string;

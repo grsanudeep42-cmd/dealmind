@@ -620,6 +620,75 @@ async def get_cross_deal_patterns() -> dict[str, Any]:
 
 
 # ---------------------------------------------------------------------------
+# Deal Risk Score
+# ---------------------------------------------------------------------------
+
+@router.get("/deal/{deal_id}/risk-score")
+async def get_risk_score(deal_id: str) -> dict[str, Any]:
+    """
+    Analyse recalled deal memories and return a 0-100 risk score,
+    risk level, top risks, and positive signals via Groq.
+    """
+    import json as _json
+
+    memories = await recall(
+        bank_id=deal_id,
+        query="risks objections blockers budget timeline competition concerns unresolved issues",
+        budget="high",
+        max_results=8,
+    )
+    context = "\n---\n".join(
+        str(m.get("text") or m.get("content") or "")[:600] for m in memories
+    )
+
+    if not context.strip():
+        return {
+            "deal_id": deal_id,
+            "score": 50,
+            "level": "Medium",
+            "top_risks": ["Insufficient memory data — ask more questions to build intelligence"],
+            "positive_signals": [],
+            "summary": "Not enough recalled data to score this deal yet.",
+        }
+
+    system = (
+        "You are an enterprise sales risk analyst. Analyse the deal memories provided and "
+        "return a deal risk assessment as strict JSON.\n\n"
+        "Risk score: 0 = zero risk (deal certain to close), 100 = deal lost.\n"
+        "Level: Low (0-39), Medium (40-59), High (60-79), Critical (80-100).\n\n"
+        "Return ONLY this JSON — no markdown, no extra text:\n"
+        '{"score": <int>, "level": "<Low|Medium|High|Critical>", '
+        '"top_risks": ["<risk1>", "<risk2>", "<risk3>"], '
+        '"positive_signals": ["<signal1>", "<signal2>"], '
+        '"summary": "<one concise sentence>"}'
+    )
+
+    user = f"Deal memories:\n\n{context}\n\nReturn the risk assessment JSON."
+
+    try:
+        raw = await _call_groq(system, user, timeout=30.0)
+        raw = raw.strip()
+        # Strip markdown fences if model wraps in ```json
+        if raw.startswith("```"):
+            raw = "\n".join(raw.split("\n")[1:])
+        if raw.endswith("```"):
+            raw = "\n".join(raw.split("\n")[:-1])
+        data = _json.loads(raw.strip())
+        return {"deal_id": deal_id, **data}
+    except Exception as exc:
+        _logger.warning("risk-score: Groq/parse failed (%s) — returning default", exc)
+        return {
+            "deal_id": deal_id,
+            "score": 45,
+            "level": "Medium",
+            "top_risks": ["Unable to analyse at this time"],
+            "positive_signals": [],
+            "summary": "Risk analysis temporarily unavailable.",
+        }
+
+
+
+# ---------------------------------------------------------------------------
 # Transcript upload / ingest
 # ---------------------------------------------------------------------------
 

@@ -1,9 +1,9 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname, useSearchParams } from "next/navigation";
+import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
-import { listDeals, type Deal } from "@/lib/api";
+import { listDeals, getDealRiskScore, type Deal, type RiskScore } from "@/lib/api";
 
 const NAV = [
   { label: "Chat", href: (d: string) => `/chat?deal=${d}`, icon: ChatIcon },
@@ -43,6 +43,107 @@ function InsightIcon() {
   );
 }
 
+/* ── Animated circular risk gauge ── */
+function RiskGauge({ risk }: { risk: RiskScore }) {
+  const [expanded, setExpanded] = useState(false);
+  const [animated, setAnimated] = useState(0);
+
+  const levelColor: Record<string, string> = {
+    Low: "#22C55E",
+    Medium: "#F59E0B",
+    High: "#EF4444",
+    Critical: "#7F1D1D",
+  };
+  const color = levelColor[risk.level] ?? "#94A3B8";
+
+  const R = 22;
+  const circ = 2 * Math.PI * R;
+  const dash = (animated / 100) * circ;
+
+  useEffect(() => {
+    const t = setTimeout(() => setAnimated(risk.score), 120);
+    return () => clearTimeout(t);
+  }, [risk.score]);
+
+  return (
+    <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+      <button
+        onClick={() => setExpanded(!expanded)}
+        style={{ background: "none", border: "none", cursor: "pointer", padding: 0, display: "flex", alignItems: "center", gap: 10, width: "100%", textAlign: "left" }}
+      >
+        {/* Ring */}
+        <svg width="54" height="54" style={{ flexShrink: 0 }}>
+          <circle cx="27" cy="27" r={R} fill="none" stroke="var(--border)" strokeWidth="4"/>
+          <circle
+            cx="27" cy="27" r={R} fill="none"
+            stroke={color} strokeWidth="4"
+            strokeDasharray={`${dash} ${circ}`}
+            strokeLinecap="round"
+            transform="rotate(-90 27 27)"
+            style={{ transition: "stroke-dasharray 1.1s ease" }}
+          />
+          <text x="27" y="27" textAnchor="middle" dominantBaseline="central"
+            style={{ fontSize: 13, fontWeight: 700, fill: color, fontFamily: "inherit" }}>
+            {risk.score}
+          </text>
+        </svg>
+
+        {/* Label */}
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <div style={{ fontSize: 12, fontWeight: 700, color, letterSpacing: "0.04em", textTransform: "uppercase" }}>
+            {risk.level} Risk
+          </div>
+          <div style={{
+            fontSize: 10.5, color: "var(--text-3)", lineHeight: 1.4, marginTop: 2,
+            overflow: "hidden", textOverflow: "ellipsis",
+            display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical" as const,
+          }}>
+            {risk.summary}
+          </div>
+        </div>
+
+        {/* Chevron */}
+        <svg width="10" height="10" viewBox="0 0 10 10" fill="none"
+          style={{ flexShrink: 0, color: "var(--text-3)", transform: expanded ? "rotate(180deg)" : "none", transition: "transform 0.2s" }}>
+          <path d="M2 3.5l3 3 3-3" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round"/>
+        </svg>
+      </button>
+
+      {/* Expanded detail */}
+      {expanded && (
+        <div style={{ paddingLeft: 4, animation: "fadeUp 0.15s ease" }}>
+          {risk.top_risks.length > 0 && (
+            <div style={{ marginBottom: 8 }}>
+              <div style={{ fontSize: 10, fontWeight: 700, color: "var(--text-3)", letterSpacing: "0.06em", textTransform: "uppercase", marginBottom: 5 }}>
+                Top Risks
+              </div>
+              {risk.top_risks.map((r, i) => (
+                <div key={i} style={{ display: "flex", gap: 6, alignItems: "flex-start", marginBottom: 5 }}>
+                  <span style={{ color: "#EF4444", fontSize: 9, marginTop: 3, flexShrink: 0 }}>▲</span>
+                  <span style={{ fontSize: 11, color: "var(--text-2)", lineHeight: 1.5 }}>{r}</span>
+                </div>
+              ))}
+            </div>
+          )}
+          {risk.positive_signals.length > 0 && (
+            <div>
+              <div style={{ fontSize: 10, fontWeight: 700, color: "var(--text-3)", letterSpacing: "0.06em", textTransform: "uppercase", marginBottom: 5 }}>
+                Positive
+              </div>
+              {risk.positive_signals.map((s, i) => (
+                <div key={i} style={{ display: "flex", gap: 6, alignItems: "flex-start", marginBottom: 5 }}>
+                  <span style={{ color: "#22C55E", fontSize: 10, marginTop: 2, flexShrink: 0 }}>✓</span>
+                  <span style={{ fontSize: 11, color: "var(--text-2)", lineHeight: 1.5 }}>{s}</span>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
 interface SidebarProps {
   dealId: string;
   onDealChange?: (id: string) => void;
@@ -52,10 +153,21 @@ export default function Sidebar({ dealId, onDealChange }: SidebarProps) {
   const pathname = usePathname();
   const [deals, setDeals] = useState<Deal[]>([]);
   const [open, setOpen] = useState(false);
+  const [risk, setRisk] = useState<RiskScore | null>(null);
+  const [riskLoading, setRiskLoading] = useState(false);
 
   useEffect(() => {
     listDeals().then((d) => setDeals(d.deals)).catch(() => {});
   }, []);
+
+  useEffect(() => {
+    setRisk(null);
+    setRiskLoading(true);
+    getDealRiskScore(dealId)
+      .then(setRisk)
+      .catch(() => null)
+      .finally(() => setRiskLoading(false));
+  }, [dealId]);
 
   const currentDeal = deals.find((d) => d.deal_id === dealId);
 
@@ -89,11 +201,7 @@ export default function Sidebar({ dealId, onDealChange }: SidebarProps) {
       {/* Deal Switcher */}
       <div className="sidebar-section" style={{ position: "relative" }}>
         <div className="sidebar-label">Deal</div>
-        <button
-          className="deal-pill"
-          onClick={() => setOpen(!open)}
-          style={{ width: "100%" }}
-        >
+        <button className="deal-pill" onClick={() => setOpen(!open)} style={{ width: "100%" }}>
           <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-start", gap: 1, overflow: "hidden" }}>
             <span style={{ fontSize: 12.5, fontWeight: 600, color: "var(--text-1)", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", maxWidth: 160 }}>
               {currentDeal?.deal_name?.split("—")[0]?.trim() || dealId}
@@ -109,41 +217,24 @@ export default function Sidebar({ dealId, onDealChange }: SidebarProps) {
 
         {open && deals.length > 0 && (
           <div style={{
-            position: "absolute",
-            top: "calc(100% - 4px)",
-            left: 8,
-            right: 8,
-            background: "var(--bg-card)",
-            border: "1px solid var(--border)",
-            borderRadius: "var(--radius)",
-            zIndex: 100,
-            overflow: "hidden",
+            position: "absolute", top: "calc(100% - 4px)", left: 8, right: 8,
+            background: "var(--bg-card)", border: "1px solid var(--border)",
+            borderRadius: "var(--radius)", zIndex: 100, overflow: "hidden",
             boxShadow: "0 8px 24px rgba(0,0,0,0.4)",
           }}>
             {deals.map((d) => (
               <button
                 key={d.deal_id}
-                onClick={() => {
-                  onDealChange?.(d.deal_id);
-                  setOpen(false);
-                }}
+                onClick={() => { onDealChange?.(d.deal_id); setOpen(false); }}
                 style={{
-                  width: "100%",
-                  padding: "10px 12px",
-                  textAlign: "left",
+                  width: "100%", padding: "10px 12px", textAlign: "left",
                   background: d.deal_id === dealId ? "var(--bg-active)" : "none",
-                  border: "none",
-                  borderBottom: "1px solid var(--border-muted)",
-                  cursor: "pointer",
-                  color: "var(--text-1)",
-                  fontFamily: "inherit",
-                  fontSize: 12.5,
-                  transition: "background 0.1s",
+                  border: "none", borderBottom: "1px solid var(--border-muted)",
+                  cursor: "pointer", color: "var(--text-1)", fontFamily: "inherit",
+                  fontSize: 12.5, transition: "background 0.1s",
                 }}
                 onMouseEnter={(e) => { (e.currentTarget as HTMLElement).style.background = "var(--bg-hover)"; }}
-                onMouseLeave={(e) => {
-                  (e.currentTarget as HTMLElement).style.background = d.deal_id === dealId ? "var(--bg-active)" : "none";
-                }}
+                onMouseLeave={(e) => { (e.currentTarget as HTMLElement).style.background = d.deal_id === dealId ? "var(--bg-active)" : "none"; }}
               >
                 <div style={{ fontWeight: 600, marginBottom: 2 }}>{d.deal_name?.split("—")[0]?.trim()}</div>
                 <div style={{ fontSize: 11, color: "var(--text-3)" }}>{d.stage} · {d.arr}</div>
@@ -171,7 +262,7 @@ export default function Sidebar({ dealId, onDealChange }: SidebarProps) {
         </nav>
       </div>
 
-      {/* Deal stats */}
+      {/* Overview stats */}
       {currentDeal && (
         <div className="sidebar-section">
           <div className="sidebar-label">Overview</div>
@@ -191,6 +282,27 @@ export default function Sidebar({ dealId, onDealChange }: SidebarProps) {
           </div>
         </div>
       )}
+
+      {/* Deal Risk Score */}
+      <div className="sidebar-section">
+        <div className="sidebar-label">Deal Risk</div>
+        {riskLoading ? (
+          <div style={{ display: "flex", alignItems: "center", gap: 10, padding: "8px 0" }}>
+            <div style={{
+              width: 54, height: 54, borderRadius: "50%",
+              border: "4px solid var(--border)", flexShrink: 0,
+              opacity: 0.5,
+            }} />
+            <div style={{ fontSize: 11, color: "var(--text-3)" }}>Analysing with Groq…</div>
+          </div>
+        ) : risk ? (
+          <RiskGauge risk={risk} />
+        ) : (
+          <div style={{ fontSize: 11, color: "var(--text-3)", padding: "6px 0" }}>
+            Risk score unavailable
+          </div>
+        )}
+      </div>
 
       {/* Footer */}
       <div style={{ marginTop: "auto", padding: "12px", borderTop: "1px solid var(--border-muted)" }}>

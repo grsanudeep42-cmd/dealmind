@@ -123,7 +123,11 @@ app.add_middleware(
         "http://127.0.0.1:3000",
         "http://localhost:3001",
         "http://127.0.0.1:3001",
+        os.environ.get("FRONTEND_URL", "https://dealmind.vercel.app"),
+        "https://frontend-seven-sigma-lfe79qlyv4.vercel.app",
+        "https://frontend-3dtqmyu01-grsanudeep42-cmds-projects.vercel.app"
     ],
+    allow_origin_regex="https://.*\\.vercel\\.app",
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],

@@ -5,6 +5,8 @@ import { useRouter, useSearchParams } from "next/navigation";
 import Sidebar from "@/app/components/Sidebar";
 import Markdown from "@/app/components/Markdown";
 import { agentChat, getDealInfo, type ChatResponse, type DealInfo, type MemorySource } from "@/lib/api";
+import UploadModal from "@/app/components/UploadModal";
+import type { UploadTranscriptResponse } from "@/lib/api";
 
 /* ─── Types ─── */
 interface Message {
@@ -125,6 +127,7 @@ export default function ChatPageInner() {
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
+  const [showUpload, setShowUpload] = useState(false);
   const chatEndRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const STORAGE_KEY = `synapse_chat_${dealId}`;
@@ -205,6 +208,16 @@ export default function ChatPageInner() {
 
   const handleDealChange = (newDeal: string) => {
     router.push(`/chat?deal=${newDeal}`);
+  };
+
+  const handleUploadSuccess = (result: UploadTranscriptResponse) => {
+    setShowUpload(false);
+    setMessages((p) => [...p, {
+      id: `sys-${Date.now()}`,
+      role: "agent",
+      text: `✅ **Call #${result.call_number} ingested into Hindsight.**\n\nYou can now ask questions about this call.`,
+      timestamp: Date.now(),
+    }]);
   };
 
   const suggestions = SUGGESTED[dealId] || SUGGESTED["acme-corp-deal"];
@@ -312,9 +325,45 @@ export default function ChatPageInner() {
           )}
         </div>
 
+        {/* Upload Modal */}
+        {showUpload && (
+          <UploadModal
+            dealId={dealId}
+            nextCallNumber={(dealInfo?.calls?.length ?? 0) + 1}
+            onClose={() => setShowUpload(false)}
+            onSuccess={handleUploadSuccess}
+          />
+        )}
+
         {/* Input bar — floating at bottom */}
         <div className="input-bar-wrap">
           <div className="input-bar">
+            <button
+              onClick={() => setShowUpload(true)}
+              title="Upload transcript"
+              style={{
+                background: "none",
+                border: "1px solid var(--border)",
+                borderRadius: 8,
+                width: 34,
+                height: 34,
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                cursor: "pointer",
+                color: "var(--text-3)",
+                flexShrink: 0,
+                transition: "all 0.12s",
+              }}
+              onMouseEnter={(e) => { (e.currentTarget as HTMLElement).style.color = "var(--accent)"; (e.currentTarget as HTMLElement).style.borderColor = "var(--accent)"; }}
+              onMouseLeave={(e) => { (e.currentTarget as HTMLElement).style.color = "var(--text-3)"; (e.currentTarget as HTMLElement).style.borderColor = "var(--border)"; }}
+            >
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <polyline points="16,16 12,12 8,16"/>
+                <line x1="12" y1="12" x2="12" y2="21"/>
+                <path d="M20.39 18.39A5 5 0 0 0 18 9h-1.26A8 8 0 1 0 3 16.3"/>
+              </svg>
+            </button>
             <textarea
               ref={textareaRef}
               value={input}
@@ -334,7 +383,7 @@ export default function ChatPageInner() {
             </button>
           </div>
           <div style={{ textAlign: "center", marginTop: 6, fontSize: 11, color: "var(--text-3)" }}>
-            Enter to send · Shift+Enter for new line · History saved per deal
+            Enter to send · Shift+Enter for new line · ↑ Upload transcript
           </div>
         </div>
       </main>

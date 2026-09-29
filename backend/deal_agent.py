@@ -719,7 +719,8 @@ class SimulateSuggestRequest(BaseModel):
 async def simulation_suggest(body: SimulateSuggestRequest) -> dict[str, Any]:
     """
     Live Groq coaching: given a customer message in a sales conversation,
-    recall from historical-deals bank and return a coaching suggestion.
+    recall from historical-deals bank and return a coaching suggestion
+    along with which memory documents were retrieved.
     """
     from synthetic_data import HISTORICAL_BANK_ID
 
@@ -733,6 +734,11 @@ async def simulation_suggest(body: SimulateSuggestRequest) -> dict[str, Any]:
     history_context = "\n---\n".join(
         str(m.get("text") or m.get("content") or "")[:800] for m in history_memories
     )
+    # Collect document IDs recalled
+    recalled_ids = [
+        m.get("document_id") or m.get("doc_id") or m.get("id") or "unknown"
+        for m in history_memories
+    ]
 
     # Also recall from current deal
     deal_memories = await recall(
@@ -778,6 +784,7 @@ async def simulation_suggest(body: SimulateSuggestRequest) -> dict[str, Any]:
         if raw.endswith("```"):
             raw = "\n".join(raw.split("\n")[:-1])
         data = _json.loads(raw.strip())
+        data["recalled_memories"] = recalled_ids
         return data
     except Exception as exc:
         _logger.warning("simulation/suggest failed: %s", exc)
@@ -787,7 +794,9 @@ async def simulation_suggest(body: SimulateSuggestRequest) -> dict[str, Any]:
             "pattern": "Pattern analysis unavailable.",
             "suggestion": "Focus on value differentiation and compliance positioning.",
             "coached_reply": "Let me address that concern directly...",
+            "recalled_memories": recalled_ids,
         }
+
 
 
 # ---------------------------------------------------------------------------

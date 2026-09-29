@@ -79,6 +79,8 @@ export default function GraphPageInner() {
   const [ForceGraph, setForceGraph] = useState<ForceGraphComponent | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const [dimensions, setDimensions] = useState({ w: 800, h: 600 });
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const fgRef = useRef<any>(null);
 
   useEffect(() => {
     import("react-force-graph-2d").then((mod) => {
@@ -235,10 +237,21 @@ export default function GraphPageInner() {
 
             {!loading && !error && ForceGraph && currentGraphData && (
               <ForceGraph
+                ref={fgRef}
                 graphData={fgData}
                 width={dimensions.w}
                 height={dimensions.h}
                 backgroundColor="var(--bg)"
+                d3AlphaDecay={0.02}
+                d3VelocityDecay={0.3}
+                warmupTicks={80}
+                cooldownTicks={200}
+                onEngineStop={() => {
+                  if (fgRef.current) {
+                    fgRef.current.d3Force('charge')?.strength(graphMode === 'associative' ? -400 : -300);
+                    fgRef.current.d3Force('link')?.distance(graphMode === 'associative' ? 80 : 60);
+                  }
+                }}
                 nodeLabel={(node: FGNode) => `${node.label}\n(${node.type.replace(/_/g, " ")})`}
                 nodeColor={(node: FGNode) => {
                   if (graphMode === "associative" && spreadActivated.has(node.id)) return "#F59E0B";
@@ -322,6 +335,7 @@ export default function GraphPageInner() {
                     ctx.fillText(line, node.x!, startY + i * lineH);
                   });
                 }}
+                nodeCanvasObjectMode={() => "after"}
               />
             )}
           </div>

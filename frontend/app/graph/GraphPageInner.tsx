@@ -126,6 +126,16 @@ export default function GraphPageInner() {
 
   const currentGraphData = graphMode === "entity" ? entityData : assocData;
 
+  // Configure d3 forces after graph mounts + data arrives so nodes spread apart
+  useEffect(() => {
+    if (!fgRef.current || !currentGraphData) return;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const fg = fgRef.current as any;
+    fg.d3Force("charge")?.strength(graphMode === "associative" ? -500 : -400);
+    fg.d3Force("link")?.distance(graphMode === "associative" ? 100 : 70);
+    fg.d3ReheatSimulation?.();
+  }, [currentGraphData, graphMode]);
+
   const fgData = currentGraphData
     ? {
         nodes: currentGraphData.nodes.map((n) => ({ ...n })),
@@ -242,16 +252,8 @@ export default function GraphPageInner() {
                 width={dimensions.w}
                 height={dimensions.h}
                 backgroundColor="var(--bg)"
-                d3AlphaDecay={0.02}
-                d3VelocityDecay={0.3}
-                warmupTicks={80}
-                cooldownTicks={200}
-                onEngineStop={() => {
-                  if (fgRef.current) {
-                    fgRef.current.d3Force('charge')?.strength(graphMode === 'associative' ? -400 : -300);
-                    fgRef.current.d3Force('link')?.distance(graphMode === 'associative' ? 80 : 60);
-                  }
-                }}
+                d3AlphaDecay={0.015}
+                d3VelocityDecay={0.25}
                 nodeLabel={(node: FGNode) => `${node.label}\n(${node.type.replace(/_/g, " ")})`}
                 nodeColor={(node: FGNode) => {
                   if (graphMode === "associative" && spreadActivated.has(node.id)) return "#F59E0B";
